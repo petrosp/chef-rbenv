@@ -20,52 +20,63 @@
 include_recipe "rbenv::user_install"
 
 Array(node['rbenv']['user_installs']).each do |rbenv_user|
-  plugins   = rbenv_user['plugins'] || node['rbenv']['user_plugins']
-  rubies    = rbenv_user['rubies'] || node['rbenv']['user_rubies']
-  gem_hash  = rbenv_user['gems'] || node['rbenv']['user_gems']
-  rvm_download_hash  = rbenv_user['rvm_rubies'] || []
+  plugins         = rbenv_user['plugins'] || node['rbenv']['user_plugins']
+  rubies          = rbenv_user['rubies'] || node['rbenv']['user_rubies']
+  gem_hash        = rbenv_user['gems'] || node['rbenv']['user_gems']
+  rubies_provider = rbenv_user['rubies_provider'] || node['rbenv']['rubies_provider']
 
   plugins.each do |plugin|
     rbenv_plugin plugin['name'] do
-      git_url   plugin['git_url']
-      git_ref   plugin['git_ref'] if plugin['git_ref']
-      user      rbenv_user['user']
+      git_url plugin['git_url']
+      git_ref plugin['git_ref'] if plugin['git_ref']
+      user rbenv_user['user']
       root_path rbenv_user['root_path'] if rbenv_user['root_path']
     end
   end
 
-  rubies.each do |rubie|
-    if rubie.is_a?(Hash)
-      rbenv_ruby "#{rubie['name']} (#{rbenv_user['user']})" do
-        definition  rubie['name']
-        user        rbenv_user['user']
-        root_path   rbenv_user['root_path'] if rbenv_user['root_path']
-        environment rubie['environment'] if rubie['environment']
+  case rubies_provider
+  when "rbenv"
+    rubies.each do |rubie|
+      if rubie.is_a?(Hash)
+        rbenv_ruby "#{rubie['name']} (#{rbenv_user['user']})" do
+          definition rubie['name']
+          user rbenv_user['user']
+          root_path rbenv_user['root_path'] if rbenv_user['root_path']
+          environment rubie['environment'] if rubie['environment']
+        end
+      else
+        rbenv_ruby "#{rubie} (#{rbenv_user['user']})" do
+          definition rubie
+          user rbenv_user['user']
+          root_path rbenv_user['root_path'] if rbenv_user['root_path']
+        end
       end
-    else
-      rbenv_ruby "#{rubie} (#{rbenv_user['user']})" do
-        definition  rubie
-        user        rbenv_user['user']
-        root_path   rbenv_user['root_path'] if rbenv_user['root_path']
+    end
+  when "rvm"
+    rubies.each do |rubie|
+      rbenv_script "Downloading #{rubie} from RVM binary repo" do
+        user rbenv_user['user']
+        code %{rbenv download #{rubie}}
+        retries 2
       end
     end
   end
 
   rbenv_global "#{rbenv_user['global']} (#{rbenv_user['user']})" do
     rbenv_version rbenv_user['global']
-    user          rbenv_user['user']
-    root_path     rbenv_user['root_path'] if rbenv_user['root_path']
+    user rbenv_user['user']
+    root_path rbenv_user['root_path'] if rbenv_user['root_path']
 
-    only_if     { rbenv_user['global'] }
+    only_if { rbenv_user['global'] }
   end
 
   gem_hash.each_pair do |rubie, gems|
     Array(gems).each do |gem|
       rbenv_gem "#{gem['name']} (#{rbenv_user['user']})" do
-        package_name    gem['name']
-        user            rbenv_user['user']
-        root_path       rbenv_user['root_path'] if rbenv_user['root_path']
-        rbenv_version   rubie
+        package_name gem['name']
+        user rbenv_user['user']
+        root_path rbenv_user['root_path'] if rbenv_user['root_path']
+        rbenv_version rubie
 
         %w{version action options source}.each do |attr|
           send(attr, gem[attr]) if gem[attr]
@@ -74,9 +85,4 @@ Array(node['rbenv']['user_installs']).each do |rbenv_user|
     end
   end
 
-  rvm_download_hash.each do |rubie|
-    rbenv_script "Downloading #{rubie} from RVM binary repo" do
-      code "rbenv download #{rubie}"
-    end
-  end
 end

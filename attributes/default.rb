@@ -43,7 +43,21 @@ default['rbenv']['user_gems'] = Hash.new
 
 # list of rbenv plugins to install
 default['rbenv']['plugins']      = []
-default['rbenv']['user_plugins'] = []
+default['rbenv']['user_plugins'] = [
+  {
+    :name    => 'rvm-download',
+    :git_url => "https://github.com/garnieretienne/rvm-download.git",
+  },
+  { :name     => 'rbenv-vars',
+    :git_url => 'https://github.com/sstephenson/rbenv-vars.git',
+  },
+  { :name => 'rbenv-gem-rehash',
+    :git_url => 'https://github.com/sstephenson/rbenv-gem-rehash.git',
+  }
+]
+
+# which provider to use, choose between rbenv (runtime compilation) and rvm (binaries)
+default['rbenv']['rubies_provider'] = "rvm"
 
 # whether to create profile.d shell script
 default['rbenv']['create_profiled'] = true
