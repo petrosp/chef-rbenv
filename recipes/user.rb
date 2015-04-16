@@ -23,6 +23,7 @@ Array(node['rbenv']['user_installs']).each do |rbenv_user|
   plugins   = rbenv_user['plugins'] || node['rbenv']['user_plugins']
   rubies    = rbenv_user['rubies'] || node['rbenv']['user_rubies']
   gem_hash  = rbenv_user['gems'] || node['rbenv']['user_gems']
+  rvm_download_hash  = rbenv_user['rvm_rubies'] || []
 
   plugins.each do |plugin|
     rbenv_plugin plugin['name'] do
@@ -70,6 +71,12 @@ Array(node['rbenv']['user_installs']).each do |rbenv_user|
           send(attr, gem[attr]) if gem[attr]
         end
       end
+    end
+  end
+
+  rvm_download_hash.each do |rubie|
+    rbenv_script "Downloading #{rubie} from RVM binary repo" do
+      code "rbenv download #{rubie}"
     end
   end
 end
